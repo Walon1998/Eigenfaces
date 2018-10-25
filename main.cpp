@@ -17,24 +17,24 @@ VectorXd load_pgm(const std::string &filename) {
     std::string inputLine = "";
 
     // First line : version
-    std::getline(infile,inputLine);
+    std::getline(infile, inputLine);
 
     // Second line : comment
-    std::getline(infile,inputLine);
+    std::getline(infile, inputLine);
 
     // Continue with a stringstream
     ss << infile.rdbuf();
     // Third line : size
     ss >> cols >> rows;
 
-    VectorXd picture(rows*cols);
+    VectorXd picture(rows * cols);
 
     // Following lines : data
-    for(row = 0; row < rows; ++row) {
+    for (row = 0; row < rows; ++row) {
         for (col = 0; col < cols; ++col) {
             int val;
             ss >> val;
-            picture(col*rows + row) = val;
+            picture(col * rows + row) = val;
         }
     }
 
@@ -48,28 +48,36 @@ int main() {
     int w = 195;
     int M = 15;
 
-    MatrixXd faces(h*w, M);
-    VectorXd meanFace(h*w);
+    MatrixXd faces(h * w, M);
+    VectorXd meanFace(h * w);
 
     // loads pictures as flattened vectors into faces
-    for (int i=0; i<M; i++) {
-        std::string filename = "./basePictures/subject"+
-                               std::to_string(i+1) + ".pgm";
+    for (int i = 0; i < M; i++) {
+        std::string filename = "./basePictures/subject" +
+                               std::to_string(i + 1) + ".pgm";
         VectorXd flatPic = load_pgm(filename);
         faces.col(i) = flatPic;
 
-        // TODO: Point (b)
+        meanFace += flatPic;
+
     }
+    meanFace = meanFace / M;
+    faces.colwise() -= meanFace;
 
-
-    // TODO: Point (e)
+    JacobiSVD<MatrixXd> svd(faces, ComputeThinU | ComputeThinV);
+    MatrixXd eigenfaces = svd.matrixU();
 
     // try to recognize a test face
-    string testPicName = "./testPictures/subject01.happy.pgm";
+    string testPicName = "./testPictures/subject04.glasses.pgm";
     VectorXd newFace = load_pgm(testPicName);
 
-    // TODO: Point (f)
+    MatrixXd Ut = eigenfaces.transpose();
+    MatrixXd projection = Ut * faces;
+    VectorXd x = Ut * (newFace - meanFace);
 
-    // TODO: Point (g)
+    int min;
+    (projection.colwise() - x).colwise().norm().minCoeff(&min);
+
+    cout << testPicName << " is identifiedas subject  " << min + 1 << endl;
 
 }
